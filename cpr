@@ -30,30 +30,27 @@ get '/:year/:month/:day' => sub {
   my $cache_key = 'cpr' . $date;
 
   if (!$cache->get($cache_key)) {
-    my @cpr  = generate1968($date);
+    my @cpr = generate1968($date);
 
-    my $today = {
-      'male'   => [],
-      'female' => [],
-    };
+    my $cprs = {};
     foreach my $cpr (@cpr) {
       my @matches = $cpr =~ /(\d{6})(\d{4})/;
       if ($cpr % 2) {
-        push @{$today->{male}}, join '-', @matches;
+        push @{$cprs->{male}}, join '-', @matches;
       }
       else {
-        push @{$today->{female}}, join '-', @matches;
+        push @{$cprs->{female}}, join '-', @matches;
       }
     }
 
-    $cache->set($cache_key => $today);
+    $cache->set($cache_key => $cprs);
   }
 
-  my $cpr = $cache->get($cache_key);
+  my $cprs = $cache->get($cache_key);
 
   $self->stash(date   => $dt->ymd);
-  $self->stash(male   => $cpr->{male});
-  $self->stash(female => $cpr->{female});
+  $self->stash(male   => $cprs->{male});
+  $self->stash(female => $cprs->{female});
 
   $self->render('list');
 };
@@ -73,6 +70,7 @@ __DATA__
         </div>
       </div>
     </div>
+
     <div class="container">
       <div class="row">
         <div class="col-sm-4 col-sm-offset-1 col-xs-6">
@@ -115,6 +113,7 @@ __DATA__
         </div>
       </div>
     </div>
+
     <div class="container">
       <div class="row">
         <div class="col-sm-4 col-sm-offset-1 col-xs-6">
@@ -170,15 +169,14 @@ __DATA__
     <![endif]-->
   </head>
   <body>
-    <%= content %>
-
+<%= content %>
     <div class="container">
       <div class="row">
-        <div class="col-sm-11 col-sm-offset-1 col-xs-12">
+        <div class="col-sm-8 col-sm-offset-1 col-xs-12">
           <p class="adjust-top">
             Listerne viser kun CPR-numre med kontrolciffer. Se Det Centrale Personregisters dokumentation for mere information: <a href="https://cpr.dk/media/167692/personnummeret%20i%20cpr.pdf">Personnummeret i CPR-systemet</a>.
           </p>
-          <p class="adjust-bottom">
+          <p class="adjust-top adjust-bottom">
             Koden er tilgængelig på GitHub: <a href="https://github.com/wulff/mojo-cpr">github.com/wulff/mojo-cpr</a>.
           </p>
         </div>
