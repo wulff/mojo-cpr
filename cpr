@@ -26,8 +26,6 @@ get '/:year/:month/:day' => sub {
     time_zone => 'Europe/Copenhagen'
   );
 
-  $self->stash(datestamp => $dt->ymd);
-
   my $date = $dt->strftime('%d%m%y');
   my $cache_key = 'cpr' . $date;
 
@@ -53,6 +51,7 @@ get '/:year/:month/:day' => sub {
 
   my $cpr = $cache->get($cache_key);
 
+  $self->stash(date   => $dt->ymd);
   $self->stash(male   => $cpr->{male});
   $self->stash(female => $cpr->{female});
 
@@ -112,7 +111,7 @@ __DATA__
     <div class="container">
       <div class="row">
         <div class="col-sm-8 col-sm-offset-1 col-xs-12">
-          <h1>Dagens CPR-numre: <%= $datestamp %></h1>
+          <h1>Dagens CPR-numre: <%= $date %></h1>
         </div>
       </div>
     </div>
