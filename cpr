@@ -5,7 +5,7 @@ use Business::DK::CPR qw(generate1968);
 use DateTime;
 use Mojo::Cache;
 
-my $cache  = Mojo::Cache->new(max_keys => 365);
+my $cache  = Mojo::Cache->new(max_keys => 100);
 my $config = app->plugin('Config');
 
 app->config(hypnotoad => {listen => ['http://*:' . $config->{listen}]});
@@ -53,14 +53,8 @@ get '/:year/:month/:day' => sub {
 
   my $cpr = $cache->get($cache_key);
 
-  my @male   = @{$cpr->{male}};
-  my @female = @{$cpr->{female}};
-
-  $self->stash(male   => \@male);
-  $self->stash(female => \@female);
-
-  $self->stash(male_count   => $#male);
-  $self->stash(female_count => $#female);
+  $self->stash(male   => $cpr->{male});
+  $self->stash(female => $cpr->{female});
 
   $self->render('list');
 };
@@ -125,7 +119,7 @@ __DATA__
     <div class="container">
       <div class="row">
         <div class="col-sm-4 col-sm-offset-1 col-xs-6">
-          <p>Mænd (<%= $male_count %>)</p>
+          <p>Mænd (<%= $#{$male} %>)</p>
           <p>-------------</p>
           <ul>
 % for my $male (@$male) {
@@ -134,7 +128,7 @@ __DATA__
           </ul>
         </div>
         <div class="col-sm-4 col-xs-6">
-          <p>Kvinder (<%= $female_count %>)</p>
+          <p>Kvinder (<%= $#{$female} %>)</p>
           <p>-------------</p>
           <ul>
 % for my $female (@$female) {
