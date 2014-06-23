@@ -1,0 +1,242 @@
+#!/usr/bin/env perl
+use Mojolicious::Lite;
+
+use Business::DK::CPR qw(generate1968);
+use DateTime;
+use Mojo::Cache;
+
+my $cache  = Mojo::Cache->new(max_keys => 365);
+my $config = app->plugin('Config');
+
+app->config(hypnotoad => {listen => ['http://*:' . $config->{listen}]});
+app->secrets([$config->{secret}]);
+
+get '/' => sub {
+  my $self = shift;
+  $self->render('index');
+};
+
+get '/:year/:month/:day' => sub {
+  my $self = shift;
+
+  my $dt = DateTime->new(
+    year      => $self->param('year'),
+    month     => $self->param('month'),
+    day       => $self->param('day'),
+    time_zone => 'Europe/Copenhagen'
+  );
+
+  $self->stash(datestamp => $dt->ymd);
+
+  my $date = $dt->strftime('%d%m%y');
+  my $cache_key = 'cpr' . $date;
+
+  if (!$cache->get($cache_key)) {
+    my @cpr  = generate1968($date);
+
+    my $today = {
+      'male'   => [],
+      'female' => [],
+    };
+    foreach my $cpr (@cpr) {
+      my @matches = $cpr =~ /(\d{6})(\d{4})/;
+      if ($cpr % 2) {
+        push @{$today->{male}}, join '-', @matches;
+      }
+      else {
+        push @{$today->{female}}, join '-', @matches;
+      }
+    }
+
+    $cache->set($cache_key => $today);
+  }
+
+  my $cpr = $cache->get($cache_key);
+
+  my @male   = @{$cpr->{male}};
+  my @female = @{$cpr->{female}};
+
+  $self->stash(male   => \@male);
+  $self->stash(female => \@female);
+
+  $self->stash(male_count   => $#male);
+  $self->stash(female_count => $#female);
+
+  $self->render('list');
+};
+
+app->start;
+__DATA__
+
+@@ index.html.ep
+% layout 'default';
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-8 col-sm-offset-1 col-xs-12">
+          <h1>Dagens CPR-numre</h1>
+          <p class="adjust-bottom">
+            Her kan du se alle gyldige CPR-numre for en given dato. Tilføj den ønskede dato til sidens URL på formen /ÅÅÅÅ/MM/DD. F.eks. <a href="/1970/04/01">/1970/04/01</a> hvis du ønsker at se CPR-numre for 1. april 1970.
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-4 col-sm-offset-1 col-xs-6">
+          <p>Mænd</p>
+          <p>-------------</p>
+          <ul>
+            <li>010470-0039</li>
+            <li>010470-0047</li>
+            <li>010470-0055</li>
+            <li>010470-0063</li>
+            <li>010470-0071</li>
+            <li>010470-0101</li>
+            <li>010470-0179</li>
+            <li>...</li>
+          </ul>
+        </div>
+        <div class="col-sm-4 col-xs-6">
+          <p>Kvinder</p>
+          <p>-------------</p>
+          <ul>
+            <li>010470-0004</li>
+            <li>010470-0012</li>
+            <li>010470-0020</li>
+            <li>010470-0098</li>
+            <li>010470-0128</li>
+            <li>010470-0136</li>
+            <li>010470-0144</li>
+            <li>...</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+@@ list.html.ep
+% layout 'default';
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-8 col-sm-offset-1 col-xs-12">
+          <h1>Dagens CPR-numre: <%= $datestamp %></h1>
+        </div>
+      </div>
+    </div>
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-4 col-sm-offset-1 col-xs-6">
+          <p>Mænd (<%= $male_count %>)</p>
+          <p>-------------</p>
+          <ul>
+% for my $male (@$male) {
+            <li><%= $male %></li>
+% }
+          </ul>
+        </div>
+        <div class="col-sm-4 col-xs-6">
+          <p>Kvinder (<%= $female_count %>)</p>
+          <p>-------------</p>
+          <ul>
+% for my $female (@$female) {
+            <li><%= $female %></li>
+% }
+          </ul>
+        </div>
+      </div>
+    </div>
+
+@@ exception.html.ep
+% layout 'default';
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-8 col-sm-offset-1 col-xs-12">
+          <h1>Fejl</h1>
+          <p>
+            Der opstod en fejl. Kontrollér om du har angivet en gyldig dato i URLen.
+          </p>
+        </div>
+      </div>
+    </div>
+
+@@ layouts/default.html.ep
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dagens CPR-numre</title>
+
+    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+    <link rel="stylesheet" href="/css/cpr.css">
+
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <%= content %>
+
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-11 col-sm-offset-1 col-xs-12">
+          <p class="adjust-top">
+            Listerne viser kun CPR-numre med kontrolciffer. Se Det Centrale Personregisters dokumentation for mere information: <a href="https://cpr.dk/media/167692/personnummeret%20i%20cpr.pdf">Personnummeret i CPR-systemet</a>.
+          </p>
+          <p class="adjust-bottom">
+            Koden er tilgængelig på GitHub: <a href="https://github.com/wulff/mojo-cpr">github.com/wulff/mojo-cpr</a>.
+          </p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+
+@@ css/cpr.css
+body {
+  background: transparent url(/paper.png) repeat;
+}
+@media (min-width: 768px) {
+  body {
+    background: transparent url(/paper-perf.png) repeat-y;
+  }
+}
+
+h1, p, ul, li {
+  margin: 0;
+  padding: 0;
+  font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+  font-size: 16px;
+  font-weight: normal;
+  line-height: 28px;
+}
+
+h1 {
+  margin: 28px 0;
+  font-weight: 700;
+}
+
+a {
+  padding-bottom: 1px;
+  color: #000;
+  border-bottom: 1px solid #000;
+  text-decoration: none;
+}
+a:hover {
+  color: #600;
+  border-bottom: 1px solid #600;
+  text-decoration: none;
+}
+
+p.adjust-top {
+  margin-top: 28px;
+}
+p.adjust-bottom {
+  margin-bottom: 28px;
+}
+
+ul {
+  list-style-type: none;
+}
