@@ -16,7 +16,7 @@ get '/' => sub {
   $self->render('index');
 };
 
-get '/:year/:month/:day' => [year => qr/\d{4}/, month => qr/\d{2}/, day => qr/\d{2}/,] => sub {
+get '/:year/:month/:day' => [year => qr/\d{4}/, month => qr/\d{2}/, day => qr/\d{2}/] => sub {
   my $self = shift;
 
   my $dt = DateTime->new(
