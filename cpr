@@ -18,8 +18,9 @@ get '/' => sub {
   my $self = shift;
 
   $self->res->headers->cache_control('public, max-age=' . $expires);
+  $self->res->headers->etag('cpr-index');
   $self->res->headers->expires(HTTP::Date::time2str(time + $expires));
-  $self->res->headers->last_modified(HTTP::Date::time2str(0));
+  $self->res->headers->last_modified(HTTP::Date::time2str(time - $expires));
 
   $self->render('index');
 };
@@ -61,8 +62,9 @@ get '/:year/:month/:day' => [year => qr/\d{4}/, month => qr/\d{2}/, day => qr/\d
   $self->stash(female => $cprs->{female});
 
   $self->res->headers->cache_control('public, max-age=' . $expires);
+  $self->res->headers->etag('cpr-' . $dt->strftime('%Y-%m-%d'));
   $self->res->headers->expires(HTTP::Date::time2str(time + $expires));
-  $self->res->headers->last_modified(HTTP::Date::time2str(0));
+  $self->res->headers->last_modified(HTTP::Date::time2str(time - $expires));
 
   $self->render('list');
 };
@@ -173,7 +175,54 @@ __DATA__
 
     <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
-    <link rel="stylesheet" href="/css/cpr.css">
+
+    <style type="text/css">
+      body {
+        background: transparent url(/paper.png) repeat;
+      }
+      @media (min-width: 768px) {
+        body {
+          background: transparent url(/paper-perf.png) repeat-y;
+        }
+      }
+
+      h1, p, ul, li {
+        margin: 0;
+        padding: 0;
+        font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+        font-size: 16px;
+        font-weight: normal;
+        line-height: 28px;
+      }
+
+      h1 {
+        margin: 28px 0;
+        font-weight: 700;
+      }
+
+      a {
+        padding-bottom: 1px;
+        color: #000;
+        border-bottom: 1px solid #000;
+        text-decoration: none;
+      }
+      a:hover {
+        color: #600;
+        border-bottom: 1px solid #600;
+        text-decoration: none;
+      }
+
+      p.adjust-top {
+        margin-top: 28px;
+      }
+      p.adjust-bottom {
+        margin-bottom: 28px;
+      }
+
+      ul {
+        list-style-type: none;
+      }
+    </style>
 
     <!--[if lt IE 9]>
       <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
@@ -196,50 +245,3 @@ __DATA__
     </div>
   </body>
 </html>
-
-@@ css/cpr.css
-body {
-  background: transparent url(/paper.png) repeat;
-}
-@media (min-width: 768px) {
-  body {
-    background: transparent url(/paper-perf.png) repeat-y;
-  }
-}
-
-h1, p, ul, li {
-  margin: 0;
-  padding: 0;
-  font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
-  font-size: 16px;
-  font-weight: normal;
-  line-height: 28px;
-}
-
-h1 {
-  margin: 28px 0;
-  font-weight: 700;
-}
-
-a {
-  padding-bottom: 1px;
-  color: #000;
-  border-bottom: 1px solid #000;
-  text-decoration: none;
-}
-a:hover {
-  color: #600;
-  border-bottom: 1px solid #600;
-  text-decoration: none;
-}
-
-p.adjust-top {
-  margin-top: 28px;
-}
-p.adjust-bottom {
-  margin-bottom: 28px;
-}
-
-ul {
-  list-style-type: none;
-}
