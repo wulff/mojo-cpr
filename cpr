@@ -9,14 +9,17 @@ use HTTP::Date;
 my $cache  = Mojo::Cache->new(max_keys => 100);
 my $config = app->plugin('Config');
 
+my $expires = 30 * 24 * 60 * 60;
+
 app->config(hypnotoad => {listen => ['http://*:' . $config->{listen}]});
 app->secrets([$config->{secret}]);
 
 get '/' => sub {
   my $self = shift;
 
-  $self->res->headers->cache_control('public, max-age=1209600');
-  $self->res->headers->expires(HTTP::Date::time2str(time + 30*24*60*60));
+  $self->res->headers->cache_control('public, max-age=' . $expires);
+  $self->res->headers->expires(HTTP::Date::time2str(time + $expires));
+  $self->res->headers->last_modified(HTTP::Date::time2str(0));
 
   $self->render('index');
 };
@@ -57,8 +60,9 @@ get '/:year/:month/:day' => [year => qr/\d{4}/, month => qr/\d{2}/, day => qr/\d
   $self->stash(male   => $cprs->{male});
   $self->stash(female => $cprs->{female});
 
-  $self->res->headers->header('Cache-Control' => 'public, max-age=1209600');
-  $self->res->headers->expires(HTTP::Date::time2str(time + 30*24*60*60));
+  $self->res->headers->cache_control('public, max-age=' . $expires);
+  $self->res->headers->expires(HTTP::Date::time2str(time + $expires));
+  $self->res->headers->last_modified(HTTP::Date::time2str(0));
 
   $self->render('list');
 };
