@@ -13,6 +13,9 @@ app->secrets([$config->{secret}]);
 
 get '/' => sub {
   my $self = shift;
+
+  $self->res->headers->header('Cache-Control' => 'public,max-age=1209600');
+
   $self->render('index');
 };
 
@@ -51,6 +54,8 @@ get '/:year/:month/:day' => [year => qr/\d{4}/, month => qr/\d{2}/, day => qr/\d
   $self->stash(date   => $dt->ymd);
   $self->stash(male   => $cprs->{male});
   $self->stash(female => $cprs->{female});
+
+  $self->res->headers->header('Cache-Control' => 'public,max-age=1209600');
 
   $self->render('list');
 };
